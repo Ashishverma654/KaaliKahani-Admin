@@ -150,7 +150,7 @@ export default function UsersPage() {
             />
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger>
               <Button variant="outline" className="border-white/5 bg-white/[0.03] min-w-[120px]">
                 <Filter className="w-4 h-4 mr-2" />
                 {statusFilter === 'all' ? 'All Users' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
@@ -273,57 +273,58 @@ export default function UsersPage() {
             ) : (
               filteredUsers?.map((user) => (
                 <TableRow key={user._id} className="border-white/5 hover:bg-white/[0.03] transition-colors">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                      <UserIcon className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">{user.name}</p>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                        <Mail className="w-3 h-3" />
-                        {user.email}
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <UserIcon className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">{user.name}</p>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                          <Mail className="w-3 h-3" />
+                          {user.email}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    className={user.isActive 
-                      ? "bg-green-500/10 text-green-500 border-green-500/20" 
-                      : "bg-destructive/10 text-destructive border-destructive/20"
-                    }
-                  >
-                    {user.isActive ? 'Active' : 'Banned'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Calendar className="w-3.5 h-3.5" />
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-4">
-                    <div className="flex items-center gap-2">
-                      {user.isActive ? (
-                        <ShieldCheck className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <ShieldBan className="w-4 h-4 text-destructive" />
-                      )}
-                      <Switch 
-                        checked={user.isActive} 
-                        onCheckedChange={() => handleToggle(user._id)}
-                        disabled={toggleStatusMutation.isPending}
-                      />
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={user.isActive 
+                        ? "bg-green-500/10 text-green-500 border-green-500/20" 
+                        : "bg-destructive/10 text-destructive border-destructive/20"
+                      }
+                    >
+                      {user.isActive ? 'Active' : 'Banned'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {new Date(user.createdAt).toLocaleDateString()}
                     </div>
-                    <Button variant="ghost" size="icon" className="hover:bg-white/10">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-4">
+                      <div className="flex items-center gap-2">
+                        {user.isActive ? (
+                          <ShieldCheck className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <ShieldBan className="w-4 h-4 text-destructive" />
+                        )}
+                        <Switch 
+                          checked={user.isActive} 
+                          onCheckedChange={() => handleToggle(user._id)}
+                          disabled={toggleStatusMutation.isPending}
+                        />
+                      </div>
+                      <Button variant="ghost" size="icon" className="hover:bg-white/10">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
