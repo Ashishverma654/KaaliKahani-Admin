@@ -94,8 +94,8 @@ export default function CreateStoryPage() {
         category: formData.category,
         coverImage: formData.coverImage,
         status: finalStatus,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        language: ['en'],
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+        language: 'en',
         seriesId: formData.seriesId === 'none' ? null : formData.seriesId,
         seriesOrder: formData.seriesOrder
       };
