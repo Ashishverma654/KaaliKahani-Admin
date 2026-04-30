@@ -3,57 +3,26 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  MoreVertical, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
-  Search,
-  Filter,
-  BrainCircuit,
-  Calendar,
-  Languages,
-  User as UserIcon
-} from 'lucide-react';
+import { MoreVertical, Eye, CheckCircle, XCircle, Search, Filter, Calendar, Languages, User as UserIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
-} from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import toast from 'react-hot-toast';
 
 interface Story {
   _id: string;
-  title: string;
-  author: {
-    name: string;
-  };
+  title: any;
+  author: { name: string };
   category: string;
   language: string;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
-  content: string;
+  content: any;
   aiRealismScore?: number;
   aiSuggestedCategory?: string;
 }
@@ -64,183 +33,212 @@ export default function StoriesPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Fetch Stories
   const { data: stories, isLoading } = useQuery<Story[]>({
     queryKey: ['admin-stories'],
-    queryFn: async () => {
-      const response = await api.get('/admin/stories');
-      return response.data;
-    }
+    queryFn: async () => (await api.get('/admin/stories')).data.data
   });
 
-  // Filter Logic
+  const getStr = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'object') return Object.values(val).join(' ');
+    return String(val);
+  };
+
+  const getTitle = (title: any): string => {
+    if (!title) return 'Untitled';
+    if (typeof title === 'object') return title.en || title.hi || Object.values(title)[0] as string;
+    return String(title);
+  };
+
   const filteredStories = stories?.filter(story => {
-    const matchesSearch = story.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         story.author.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const title = getStr(story.title);
+    const author = getStr(story.author?.name);
+    const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         author.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || story.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Update Status Mutation
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string, status: string }) => {
-      return await api.patch(`/admin/stories/${id}/status`, { status });
-    },
+    mutationFn: async ({ id, status }: { id: string; status: string }) =>
+      await api.patch(`/admin/stories/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-stories'] });
-      toast.success('Story status updated successfully');
+      toast.success('Story status updated');
       setIsViewModalOpen(false);
     },
-    onError: (error: { response?: { data?: { message?: string } } }) => {
-      const message = error.response?.data?.message || 'Failed to update story status';
-      toast.error(message);
-    }
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to update')
   });
 
-  const handleAction = (id: string, status: 'approved' | 'rejected') => {
+  const handleAction = (id: string, status: 'approved' | 'rejected') =>
     statusMutation.mutate({ id, status });
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    next.has(id) ? next.delete(id) : next.add(id);
+    setSelectedIds(next);
   };
+
+  const toggleSelectAll = () => {
+    if (!filteredStories) return;
+    if (selectedIds.size === filteredStories.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredStories.map(s => s._id)));
+    }
+  };
+
+  const handleBulkAction = (status: 'approved' | 'rejected') => {
+    selectedIds.forEach(id => statusMutation.mutate({ id, status }));
+    setSelectedIds(new Set());
+  };
+
+  const pendingCount = stories?.filter(s => s.status === 'pending').length ?? 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      {/* Header */}
+      <div className="flex items-end justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white">Story Moderation</h2>
-          <p className="text-muted-foreground mt-1">Review and manage community submissions.</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-white tracking-tight">Stories</h1>
+            {pendingCount > 0 && (
+              <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/20 text-xs">{pendingCount} pending</Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">Review and manage community submissions.</p>
         </div>
-        <div className="flex gap-3">
-          <div className="relative w-64">
+        <div className="flex items-center gap-2">
+          <div className="relative w-60">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search title or author..." 
-              className="pl-10 bg-white/[0.03] border-white/5 focus:border-primary/50"
+            <Input
+              placeholder="Search title or author…"
+              className="pl-10 h-9 bg-white/[0.04] border-white/[0.06] text-sm rounded-lg"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="outline" className="border-white/5 bg-white/[0.03] min-w-[120px]">
-                <Filter className="w-4 h-4 mr-2" />
-                {statusFilter === 'all' ? 'All Stories' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="border-white/[0.06] bg-white/[0.04] h-9 text-sm gap-1.5">
+                <Filter className="w-3.5 h-3.5" />
+                {statusFilter === 'all' ? 'All' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#18181b] border-white/10">
-              <DropdownMenuItem onClick={() => setStatusFilter('all')}>All Stories</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('pending')}>Pending</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('approved')}>Approved</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('rejected')}>Rejected</DropdownMenuItem>
+            <DropdownMenuContent align="end" className="bg-[#111113] border-white/[0.08]">
+              {['all', 'pending', 'approved', 'rejected'].map(s => (
+                <DropdownMenuItem key={s} onClick={() => setStatusFilter(s)} className="capitalize cursor-pointer">{s === 'all' ? 'All Stories' : s}</DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
-        <Table>
-          <TableHeader className="bg-white/[0.03]">
-            <TableRow className="border-white/5 hover:bg-transparent">
-              <TableHead className="text-muted-foreground">Title & Author</TableHead>
-              <TableHead className="text-muted-foreground">Category</TableHead>
-              <TableHead className="text-muted-foreground">Language</TableHead>
-              <TableHead className="text-muted-foreground">Status</TableHead>
-              <TableHead className="text-muted-foreground">AI Insights</TableHead>
-              <TableHead className="text-muted-foreground">Date</TableHead>
-              <TableHead className="text-right text-muted-foreground">Actions</TableHead>
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/10 border border-primary/20 rounded-lg">
+          <span className="text-sm text-primary font-medium">{selectedIds.size} selected</span>
+          <div className="flex gap-2 ml-auto">
+            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+              onClick={() => handleBulkAction('approved')}>
+              <CheckCircle className="w-3.5 h-3.5" /> Approve
+            </Button>
+            <Button size="sm" className="h-8 bg-destructive hover:bg-destructive/90 text-white text-xs gap-1.5"
+              onClick={() => handleBulkAction('rejected')}>
+              <XCircle className="w-3.5 h-3.5" /> Reject
+            </Button>
+            <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground"
+              onClick={() => setSelectedIds(new Set())}>Clear</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] overflow-x-auto">
+        <Table className="min-w-[800px]">
+          <TableHeader>
+            <TableRow className="border-white/[0.06] hover:bg-transparent">
+              <TableHead className="w-10 pl-4">
+                <input type="checkbox" className="accent-primary w-3.5 h-3.5 rounded cursor-pointer"
+                  checked={filteredStories?.length ? selectedIds.size === filteredStories.length : false}
+                  onChange={toggleSelectAll} />
+              </TableHead>
+              <TableHead className="text-muted-foreground text-xs font-semibold">Title & Author</TableHead>
+              <TableHead className="text-muted-foreground text-xs font-semibold">Category</TableHead>
+              <TableHead className="text-muted-foreground text-xs font-semibold">Language</TableHead>
+              <TableHead className="text-muted-foreground text-xs font-semibold">Status</TableHead>
+              <TableHead className="text-muted-foreground text-xs font-semibold">Date</TableHead>
+              <TableHead className="text-right text-muted-foreground text-xs font-semibold pr-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              [1, 2, 3].map((i) => (
-                <TableRow key={i} className="border-white/5">
-                  <TableCell colSpan={7}><Skeleton className="h-12 w-full bg-white/5" /></TableCell>
+              [1,2,3,4,5].map(i => (
+                <TableRow key={i} className="border-white/[0.06]">
+                  <TableCell colSpan={7} className="py-3 px-4"><Skeleton className="h-10 w-full bg-white/[0.04] rounded" /></TableCell>
                 </TableRow>
               ))
             ) : filteredStories?.length === 0 ? (
-              <TableRow className="border-white/5">
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                  No stories found matching your criteria.
+              <TableRow>
+                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground text-sm">
+                  No stories found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredStories?.map((story) => (
-                <TableRow key={story._id} className="border-white/5 hover:bg-white/[0.03] transition-colors">
-                  <TableCell>
+              filteredStories?.map(story => (
+                <TableRow key={story._id} className="border-white/[0.06] hover:bg-white/[0.02] transition-colors group">
+                  <TableCell className="pl-4">
+                    <input type="checkbox" className="accent-primary w-3.5 h-3.5 rounded cursor-pointer"
+                      checked={selectedIds.has(story._id)} onChange={() => toggleSelect(story._id)} />
+                  </TableCell>
+                  <TableCell className="py-3">
                     <div>
-                      <p className="font-semibold text-white">{story.title}</p>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                        <UserIcon className="w-3 h-3" />
-                        {story.author.name}
-                      </div>
+                      <p className="text-sm font-medium text-white group-hover:text-primary transition-colors">{getTitle(story.title)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <UserIcon className="w-3 h-3" /> {story.author?.name}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="bg-white/5 text-white font-medium border-white/10">
-                      {story.category}
-                    </Badge>
+                    <Badge variant="secondary" className="bg-white/[0.04] text-white/80 border-white/[0.06] text-[11px]">{story.category}</Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1.5 text-sm text-white">
-                      <Languages className="w-3.5 h-3.5 text-muted-foreground" />
-                      {story.language}
-                    </div>
+                    <span className="text-sm text-white/70 flex items-center gap-1.5">
+                      <Languages className="w-3.5 h-3.5 text-muted-foreground" /> {story.language}
+                    </span>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      className={cn(
-                        "capitalize",
-                        story.status === 'pending' && "bg-amber-500/10 text-amber-500 border-amber-500/20",
-                        story.status === 'approved' && "bg-green-500/10 text-green-500 border-green-500/20",
-                        story.status === 'rejected' && "bg-destructive/10 text-destructive border-destructive/20"
-                      )}
-                    >
-                      {story.status}
-                    </Badge>
+                    <Badge className={cn("text-[10px] font-semibold capitalize border",
+                      story.status === 'pending' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                      story.status === 'approved' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                      story.status === 'rejected' && "bg-red-500/10 text-red-400 border-red-500/20"
+                    )}>{story.status}</Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider">
-                          <BrainCircuit className="w-3 h-3" />
-                          Score: {story.aiRealismScore}%
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">Suggest: {story.aiSuggestedCategory}</span>
-                      </div>
-                    </div>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(story.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {new Date(story.createdAt).toLocaleDateString()}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-4">
                     <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <Button variant="ghost" size="icon" className="hover:bg-white/10">
-                          <MoreVertical className="w-4 h-4" />
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-white/[0.06]">
+                          <MoreVertical className="w-4 h-4 text-muted-foreground" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#18181b] border-white/10">
-                        <DropdownMenuItem 
-                          className="gap-2 focus:bg-white/10 cursor-pointer"
-                          onClick={() => {
-                            setSelectedStory(story);
-                            setIsViewModalOpen(true);
-                          }}
-                        >
-                          <Eye className="w-4 h-4" /> View Details
+                      <DropdownMenuContent align="end" className="bg-[#111113] border-white/[0.08] w-44">
+                        <DropdownMenuItem className="gap-2 cursor-pointer text-sm" onClick={() => { setSelectedStory(story); setIsViewModalOpen(true); }}>
+                          <Eye className="w-4 h-4 text-primary" /> Preview
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="gap-2 text-green-500 focus:bg-green-500/10 focus:text-green-500 cursor-pointer"
-                          onClick={() => handleAction(story._id, 'approved')}
-                        >
+                        <DropdownMenuItem className="gap-2 cursor-pointer text-sm text-emerald-400 focus:text-emerald-400"
+                          onClick={() => handleAction(story._id, 'approved')}>
                           <CheckCircle className="w-4 h-4" /> Approve
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
-                          onClick={() => handleAction(story._id, 'rejected')}
-                        >
+                        <DropdownMenuItem className="gap-2 cursor-pointer text-sm text-red-400 focus:text-red-400"
+                          onClick={() => handleAction(story._id, 'rejected')}>
                           <XCircle className="w-4 h-4" /> Reject
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -255,46 +253,37 @@ export default function StoriesPage() {
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-2xl bg-[#09090b] border-white/10 text-white overflow-hidden">
+        <DialogContent className="max-w-2xl bg-[#111113] border-white/[0.08] text-white">
           <DialogHeader>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className="border-primary/30 text-primary uppercase text-[10px] tracking-widest">Review Mode</Badge>
-              {selectedStory?.aiRealismScore && (
-                <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">AI Score: {selectedStory.aiRealismScore}%</Badge>
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="outline" className="border-primary/30 text-primary text-[10px] uppercase tracking-wider">Review</Badge>
+              {selectedStory?.status && (
+                <Badge className={cn("text-[10px] capitalize border",
+                  selectedStory.status === 'pending' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                  selectedStory.status === 'approved' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                  selectedStory.status === 'rejected' && "bg-red-500/10 text-red-400 border-red-500/20"
+                )}>{selectedStory.status}</Badge>
               )}
             </div>
-            <DialogTitle className="text-2xl font-bold">{selectedStory?.title}</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              By {selectedStory?.author.name} • {selectedStory?.category} • {selectedStory?.language}
+            <DialogTitle className="text-xl font-bold">{getTitle(selectedStory?.title)}</DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              By {selectedStory?.author?.name} · {selectedStory?.category} · {selectedStory?.language}
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="mt-4 p-6 rounded-xl bg-white/[0.03] border border-white/5 max-h-[400px] overflow-y-auto leading-relaxed text-slate-300 italic">
-            "{selectedStory?.content}"
+          <div className="mt-3 p-4 rounded-lg bg-white/[0.03] border border-white/[0.06] max-h-[360px] overflow-y-auto text-sm text-white/80 leading-relaxed italic">
+            "{getStr(selectedStory?.content)}"
           </div>
-
-          <div className="flex justify-end gap-3 mt-6">
-            <Button variant="outline" className="border-white/5 hover:bg-white/5" onClick={() => setIsViewModalOpen(false)}>
-              Close
-            </Button>
-            <Button 
-              className="bg-destructive hover:bg-destructive/90 text-white"
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" size="sm" className="border-white/[0.06]" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+            <Button size="sm" className="bg-destructive hover:bg-destructive/90 text-white"
               onClick={() => selectedStory && handleAction(selectedStory._id, 'rejected')}
-              disabled={statusMutation.isPending}
-            >
-              Reject Story
-            </Button>
-            <Button 
-              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={statusMutation.isPending}>Reject</Button>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => selectedStory && handleAction(selectedStory._id, 'approved')}
-              disabled={statusMutation.isPending}
-            >
-              Approve & Publish
-            </Button>
+              disabled={statusMutation.isPending}>Approve & Publish</Button>
           </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-

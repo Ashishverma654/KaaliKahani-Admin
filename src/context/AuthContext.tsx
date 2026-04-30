@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const response = await api.get('/auth/me');
-      const userData = response.data.user;
+      const userData = response.data.data;
 
       if (userData.role !== 'admin') {
         toast.error('Unauthorized: Admin access required');
@@ -70,10 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('Attempting login for:', email);
       const response = await api.post('/auth/login', { email, password });
-      const { accessToken, user: userData } = response.data;
+      console.log('Login response received:', response.status);
+      const { accessToken, user: userData } = response.data.data;
 
       if (userData.role !== 'admin') {
+        console.warn('User is not an admin:', userData.role);
         toast.error('Access denied: You are not an admin');
         return;
       }
@@ -83,6 +86,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success('Welcome back, Admin!');
       router.push('/');
     } catch (error: any) {
+      console.error('Detailed login error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       const message = error.response?.data?.message || 'Login failed';
       toast.error(message);
       throw error;

@@ -1,89 +1,120 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Save, 
-  Settings, 
-  Globe, 
-  ShieldAlert, 
-  Sparkles,
-  Layout
-} from 'lucide-react';
+import { Save, Settings, Globe, Shield, Bell, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [autoApprove, setAutoApprove] = useState(false);
+  const [wordFilter, setWordFilter] = useState(true);
+  const [emailNotify, setEmailNotify] = useState(true);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsSaving(false);
-    toast.success('Settings updated successfully');
+    toast.success('Settings saved');
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-white">Site Settings</h2>
-        <p className="text-muted-foreground mt-1">Configure global platform behavior and appearance.</p>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Settings</h1>
+        <p className="text-sm text-muted-foreground mt-1">Configure platform behavior and preferences.</p>
       </div>
 
-      <form onSubmit={handleSave} className="grid gap-6">
-        {/* General Settings */}
-        <Card className="bg-white/[0.02] border-white/5">
-          <CardHeader>
-            <div className="flex items-center gap-2 text-primary mb-2">
-              <Layout className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-widest">General Configuration</span>
+      <form onSubmit={handleSave} className="space-y-4 max-w-2xl">
+        {/* General */}
+        <Card className="bg-white/[0.02] border-white/[0.06]">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-primary mb-1">
+              <Globe className="w-4 h-4" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest">General</span>
             </div>
-            <CardTitle className="text-white">Content Curation</CardTitle>
-            <CardDescription className="text-muted-foreground">Manage featured content and homepage visibility.</CardDescription>
+            <CardTitle className="text-white text-base">Site Configuration</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm">Basic platform settings.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="featured-story">Featured Story ID</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Site Name</Label>
+              <Input defaultValue="KaaliKahani" className="h-9 bg-white/[0.04] border-white/[0.08] text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tagline</Label>
+              <Input defaultValue="Ghost stories that haunt your soul" className="h-9 bg-white/[0.04] border-white/[0.08] text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Featured Story ID</Label>
               <div className="flex gap-2">
-                <Input 
-                  id="featured-story" 
-                  placeholder="Enter Story MongoDB ID..." 
-                  className="bg-white/[0.03] border-white/10"
-                />
-                <Button type="button" variant="outline" className="border-white/10 hover:bg-white/5">
-                  Verify ID
-                </Button>
+                <Input placeholder="Enter Story MongoDB ID…" className="h-9 bg-white/[0.04] border-white/[0.08] text-sm" />
+                <Button type="button" variant="outline" size="sm" className="border-white/[0.08] h-9 text-xs shrink-0">Verify</Button>
               </div>
-              <p className="text-[10px] text-muted-foreground">This story will be highlighted on the main landing page carousel.</p>
+              <p className="text-[10px] text-muted-foreground">This story will be highlighted on the homepage.</p>
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex justify-end pt-4">
-          <Button size="lg" className="px-8 font-bold gap-2 shadow-[0_0_20px_rgba(var(--primary),0.3)]" disabled={isSaving}>
-            {isSaving ? (
-              <span className="flex items-center gap-2">
-                <Settings className="w-4 h-4 animate-spin" />
-                Saving Changes...
-              </span>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save All Settings
-              </>
-            )}
+        {/* Moderation */}
+        <Card className="bg-white/[0.02] border-white/[0.06]">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-primary mb-1">
+              <Shield className="w-4 h-4" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest">Moderation</span>
+            </div>
+            <CardTitle className="text-white text-base">Content Moderation</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm">Control how submissions are handled.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <p className="text-sm font-medium text-white">Auto-approve stories</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Skip manual review for trusted authors.</p>
+              </div>
+              <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
+            </div>
+            <div className="flex items-center justify-between py-2 border-t border-white/[0.04]">
+              <div>
+                <p className="text-sm font-medium text-white">Profanity filter</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Automatically flag stories with prohibited words.</p>
+              </div>
+              <Switch checked={wordFilter} onCheckedChange={setWordFilter} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notifications */}
+        <Card className="bg-white/[0.02] border-white/[0.06]">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2 text-primary mb-1">
+              <Bell className="w-4 h-4" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest">Notifications</span>
+            </div>
+            <CardTitle className="text-white text-base">Email Alerts</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm">Configure notification preferences.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <p className="text-sm font-medium text-white">New submission alert</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Receive an email when a new story is submitted.</p>
+              </div>
+              <Switch checked={emailNotify} onCheckedChange={setEmailNotify} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save */}
+        <div className="flex justify-end pt-2">
+          <Button type="submit" size="sm" className="bg-primary hover:bg-primary/90 gap-2 h-9 px-6" disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? 'Saving…' : 'Save Settings'}
           </Button>
         </div>
       </form>
