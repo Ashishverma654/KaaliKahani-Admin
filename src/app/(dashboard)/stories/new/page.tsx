@@ -132,7 +132,9 @@ export default function CreateStoryPage() {
       });
       
       if (res.data.success) {
-        setFormData({ ...formData, coverImage: res.data.data.url });
+        // Match backend property name 'imageUrl'
+        const imageUrl = res.data.data.imageUrl || res.data.data.url;
+        setFormData({ ...formData, coverImage: imageUrl });
         toast.success('Image uploaded successfully');
       }
     } catch (error: any) {
