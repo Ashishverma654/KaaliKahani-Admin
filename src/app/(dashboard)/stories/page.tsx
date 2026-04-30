@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ interface Story {
 }
 
 export default function StoriesPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
