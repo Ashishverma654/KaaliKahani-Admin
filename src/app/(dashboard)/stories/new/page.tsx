@@ -68,7 +68,7 @@ export default function CreateStoryPage() {
     newSeriesDescription: ''
   });
 
-  const { data: seriesList } = useQuery({
+  const { data: seriesList, refetch: refetchSeries } = useQuery({
     queryKey: ['my-series'],
     queryFn: async () => {
       const res = await api.get('/series/me');
