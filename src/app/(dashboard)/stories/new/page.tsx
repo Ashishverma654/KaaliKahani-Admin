@@ -370,7 +370,7 @@ export default function CreateStoryPage() {
               </Label>
               <Select 
                 value={formData.category} 
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                onValueChange={(value: string) => setFormData({ ...formData, category: value })}
               >
                 <SelectTrigger className="bg-white/[0.03] border-white/10 h-10">
                   <SelectValue placeholder="Select category" />
@@ -411,7 +411,7 @@ export default function CreateStoryPage() {
                 <Label htmlFor="series" className="text-sm font-medium">Select Series</Label>
                 <Select 
                   value={formData.seriesId} 
-                  onValueChange={(value) => setFormData({ ...formData, seriesId: value })}
+                  onValueChange={(value: string) => setFormData({ ...formData, seriesId: value })}
                 >
                   <SelectTrigger className="bg-white/[0.03] border-white/10 h-10">
                     <SelectValue placeholder="Standalone Story" />
