@@ -29,7 +29,7 @@ function DropdownMenuTrigger({
           ) as React.ReactElement;
           return React.cloneElement(child, {
             ...triggerProps,
-            ...child.props,
+            ...(child.props as object),
           });
         }}
       />
