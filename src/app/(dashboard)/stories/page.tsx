@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MoreVertical, Eye, CheckCircle, XCircle, Search, Filter, Calendar, Languages, User as UserIcon } from 'lucide-react';
+import { MoreVertical, Eye, CheckCircle, XCircle, Search, Filter, Calendar, Languages, User as UserIcon, PlusCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,7 +20,7 @@ interface Story {
   author: { name: string };
   category: string;
   language: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'draft';
   createdAt: string;
   content: any;
   aiRealismScore?: number;
@@ -110,7 +110,15 @@ export default function StoriesPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-1">Review and manage community submissions.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Button 
+            className="h-9 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/10"
+            onClick={() => router.push('/stories/new')}
+          >
+            <PlusCircle className="w-4 h-4" />
+            Create Story
+          </Button>
+          <div className="w-px h-6 bg-white/[0.06] mx-1" />
           <div className="relative w-60">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -128,7 +136,7 @@ export default function StoriesPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#111113] border-white/[0.08]">
-              {['all', 'pending', 'approved', 'rejected'].map(s => (
+              {['all', 'pending', 'approved', 'rejected', 'draft'].map(s => (
                 <DropdownMenuItem key={s} onClick={() => setStatusFilter(s)} className="capitalize cursor-pointer">{s === 'all' ? 'All Stories' : s}</DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -213,7 +221,8 @@ export default function StoriesPage() {
                     <Badge className={cn("text-[10px] font-semibold capitalize border",
                       story.status === 'pending' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
                       story.status === 'approved' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                      story.status === 'rejected' && "bg-red-500/10 text-red-400 border-red-500/20"
+                      story.status === 'rejected' && "bg-red-500/10 text-red-400 border-red-500/20",
+                      story.status === 'draft' && "bg-blue-500/10 text-blue-400 border-blue-500/20"
                     )}>{story.status}</Badge>
                   </TableCell>
                   <TableCell>
@@ -261,7 +270,8 @@ export default function StoriesPage() {
                 <Badge className={cn("text-[10px] capitalize border",
                   selectedStory.status === 'pending' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
                   selectedStory.status === 'approved' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                  selectedStory.status === 'rejected' && "bg-red-500/10 text-red-400 border-red-500/20"
+                  selectedStory.status === 'rejected' && "bg-red-500/10 text-red-400 border-red-500/20",
+                  selectedStory.status === 'draft' && "bg-blue-500/10 text-blue-400 border-blue-500/20"
                 )}>{selectedStory.status}</Badge>
               )}
             </div>

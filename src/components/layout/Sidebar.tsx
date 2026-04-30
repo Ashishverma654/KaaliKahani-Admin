@@ -12,7 +12,8 @@ import {
   Skull,
   MessageSquare,
   BarChart3,
-  Bell
+  Bell,
+  PlusCircle
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import api from '@/lib/api';
 const navItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Stories', href: '/stories', icon: BookOpenCheck },
+  { label: 'Add Story', href: '/stories/new', icon: PlusCircle },
   { label: 'Comments', href: '/comments', icon: MessageSquare },
   { label: 'Users', href: '/users', icon: Users },
   { label: 'Analytics', href: '/analytics', icon: BarChart3 },
