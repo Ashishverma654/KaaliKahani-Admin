@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:5000/api'
-    : 'https://kaalikahani.onrender.com/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://kaalikahani.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+console.log('API Base URL:', api.defaults.baseURL);
 
 // Request interceptor for adding the bearer token
 api.interceptors.request.use(

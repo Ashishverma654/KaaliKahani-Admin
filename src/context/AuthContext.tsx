@@ -86,12 +86,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       toast.success('Welcome back, Admin!');
       router.push('/');
     } catch (error: any) {
-      console.error('Detailed login error:', {
+      console.error('Detailed login error object:', error);
+      const errorDetails = {
         status: error.response?.status,
         data: error.response?.data,
-        message: error.message
-      });
-      const message = error.response?.data?.message || 'Login failed';
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method,
+        code: error.code
+      };
+      console.error('Detailed login error details:', JSON.stringify(errorDetails, null, 2));
+      
+      const message = error.response?.data?.message || error.message || 'Login failed';
       toast.error(message);
       throw error;
     }
