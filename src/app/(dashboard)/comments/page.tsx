@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CommentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'flagged'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'flagged'>('all');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
@@ -29,6 +29,14 @@ export default function CommentsPage() {
 
   const flagMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/admin/comments/${id}/flag`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-comments'] });
+      toast.success('Comment flag updated');
+    }
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string, status: string }) => api.patch(`/admin/comments/${id}/status`, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-comments'] });
       toast.success('Comment status updated');
@@ -50,23 +58,22 @@ export default function CommentsPage() {
   };
 
   const filtered = (comments as any[]).filter(c => {
-    const matchesSearch = c.text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         c.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         c.story?.title?.en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         c.story?.title?.hi?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === 'all' || c.isFlagged;
+    const matchesSearch = c.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         c.userId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         c.storyId?.title?.en?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         c.storyId?.title?.hi?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    let matchesFilter = true;
+    if (filter === 'flagged') matchesFilter = c.isFlagged;
+    if (filter === 'pending') matchesFilter = c.status === 'pending';
+    if (filter === 'approved') matchesFilter = c.status === 'approved';
+    
     return matchesSearch && matchesFilter;
   });
 
   const totalComments = comments.length;
   const flaggedCount = comments.filter((c: any) => c.isFlagged).length;
-  const todayCount = comments.filter((c: any) => {
-    const today = new Date();
-    const commentDate = new Date(c.createdAt);
-    return commentDate.getDate() === today.getDate() && 
-           commentDate.getMonth() === today.getMonth() &&
-           commentDate.getFullYear() === today.getFullYear();
-  }).length;
+  const pendingCount = comments.filter((c: any) => c.status === 'pending').length;
 
   if (isLoading) {
     return (
@@ -96,11 +103,15 @@ export default function CommentsPage() {
               value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
           <div className="flex gap-1 bg-white/[0.04] rounded-lg p-1 border border-white/[0.06]">
-            {(['all', 'flagged'] as const).map(f => (
+            {(['all', 'pending', 'approved', 'flagged'] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
                 className={cn("px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize",
                   filter === f ? "bg-primary text-white" : "text-muted-foreground hover:text-white"
-                )}>{f}{f === 'flagged' && flaggedCount > 0 ? ` (${flaggedCount})` : ''}</button>
+                )}>
+                  {f}
+                  {f === 'flagged' && flaggedCount > 0 ? ` (${flaggedCount})` : ''}
+                  {f === 'pending' && pendingCount > 0 ? ` (${pendingCount})` : ''}
+                </button>
             ))}
           </div>
         </div>
@@ -110,8 +121,8 @@ export default function CommentsPage() {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
         {[
           { label: 'Total Comments', value: totalComments, icon: MessageSquare, color: 'text-purple-400' },
+          { label: 'Pending Approval', value: pendingCount, icon: Clock, color: 'text-cyan-400' },
           { label: 'Flagged', value: flaggedCount, icon: AlertTriangle, color: 'text-amber-400' },
-          { label: 'Today', value: todayCount, icon: Clock, color: 'text-cyan-400' },
         ].map((m, i) => (
           <Card key={i} className="bg-white/[0.02] border-white/[0.06]">
             <CardContent className="p-4 flex items-center gap-4">
@@ -138,21 +149,43 @@ export default function CommentsPage() {
               <div className={cn("p-4", comment.isFlagged && "border-l-2 border-l-amber-500")}>
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-bold border border-primary/20 shrink-0 mt-0.5">
-                    {comment.user?.name?.charAt(0).toUpperCase() || '?'}
+                    {comment.userId?.name?.charAt(0).toUpperCase() || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-medium text-white">{comment.user?.name || 'Deleted User'}</span>
+                      <span className="text-sm font-medium text-white">{comment.userId?.name || 'Deleted User'}</span>
                       <span className="text-[10px] text-muted-foreground">on</span>
-                      <span className="text-[11px] text-primary font-medium">{comment.story?.title?.en || comment.story?.title?.hi || 'Untitled'}</span>
+                      <span className="text-[11px] text-primary font-medium">{comment.storyId?.title?.en || comment.storyId?.title?.hi || 'Untitled'}</span>
                       {comment.isFlagged && <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[9px]">Flagged</Badge>}
+                      {comment.status === 'pending' && <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[9px]">Pending</Badge>}
+                      {comment.status === 'rejected' && <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[9px]">Rejected</Badge>}
                       <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
                         {new Date(comment.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <p className="text-sm text-white/80 leading-relaxed">{comment.text}</p>
+                    <p className="text-sm text-white/80 leading-relaxed">{comment.content}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex gap-1 ml-auto">
+                        {comment.status === 'pending' && (
+                          <>
+                            <Button 
+                              variant="ghost" size="sm" 
+                              className="h-7 px-2 text-[11px] text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 gap-1"
+                              onClick={() => statusMutation.mutate({ id: comment._id, status: 'approved' })}
+                              disabled={statusMutation.isPending}
+                            >
+                              Approve
+                            </Button>
+                            <Button 
+                              variant="ghost" size="sm" 
+                              className="h-7 px-2 text-[11px] text-red-400 hover:text-red-300 hover:bg-red-400/10 gap-1"
+                              onClick={() => statusMutation.mutate({ id: comment._id, status: 'rejected' })}
+                              disabled={statusMutation.isPending}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
                         <Button 
                           variant="ghost" 
                           size="sm" 
