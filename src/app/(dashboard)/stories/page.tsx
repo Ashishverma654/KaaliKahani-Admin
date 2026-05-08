@@ -132,9 +132,9 @@ export default function StoriesPage() {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="border-white/[0.06] bg-white/[0.04] h-9 text-sm gap-1.5">
+              <Button variant="outline" size="sm" className="border-white/[0.06] bg-white/[0.04] h-9 text-sm gap-1.5 hidden md:flex">
                 <Filter className="w-3.5 h-3.5" />
-                {statusFilter === 'all' ? 'All' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                {statusFilter === 'all' ? 'All Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#111113] border-white/[0.08]">
@@ -146,19 +146,50 @@ export default function StoriesPage() {
         </div>
       </div>
 
-      {/* Bulk Action Bar */}
+      {/* Tabs / Partitions */}
+      <div className="flex items-center gap-1 p-1 bg-white/[0.04] border border-white/[0.06] rounded-xl w-fit">
+        {['all', 'pending', 'approved'].map((s) => (
+          <button
+            key={s}
+            onClick={() => {
+              setStatusFilter(s);
+              setSelectedIds(new Set()); // Clear selection when switching tabs
+            }}
+            className={cn(
+              "px-4 py-1.5 rounded-lg text-sm font-medium transition-all capitalize",
+              statusFilter === s 
+                ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                : "text-muted-foreground hover:text-white"
+            )}
+          >
+            {s}
+            {s === 'pending' && pendingCount > 0 && (
+              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 text-[10px]">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/10 border border-primary/20 rounded-lg">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-primary/10 border border-primary/20 rounded-lg animate-in fade-in slide-in-from-top-1">
           <span className="text-sm text-primary font-medium">{selectedIds.size} selected</span>
           <div className="flex gap-2 ml-auto">
-            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
-              onClick={() => handleBulkAction('approved')}>
-              <CheckCircle className="w-3.5 h-3.5" /> Approve
-            </Button>
-            <Button size="sm" className="h-8 bg-destructive hover:bg-destructive/90 text-white text-xs gap-1.5"
-              onClick={() => handleBulkAction('rejected')}>
-              <XCircle className="w-3.5 h-3.5" /> Reject
-            </Button>
+            {/* Show Approve only if there are pending stories selected */}
+            {(stories?.some(s => selectedIds.has(s._id) && s.status === 'pending')) && (
+              <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+                onClick={() => handleBulkAction('approved')}>
+                <CheckCircle className="w-3.5 h-3.5" /> Approve
+              </Button>
+            )}
+            {/* Show Reject only if there are non-rejected stories selected */}
+            {(stories?.some(s => selectedIds.has(s._id) && s.status !== 'rejected')) && (
+              <Button size="sm" className="h-8 bg-destructive hover:bg-destructive/90 text-white text-xs gap-1.5"
+                onClick={() => handleBulkAction('rejected')}>
+                <XCircle className="w-3.5 h-3.5" /> Reject
+              </Button>
+            )}
             <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground"
               onClick={() => setSelectedIds(new Set())}>Clear</Button>
           </div>
@@ -244,14 +275,18 @@ export default function StoriesPage() {
                         <DropdownMenuItem className="gap-2 cursor-pointer text-sm" onClick={() => { setSelectedStory(story); setIsViewModalOpen(true); }}>
                           <Eye className="w-4 h-4 text-primary" /> Preview
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 cursor-pointer text-sm text-emerald-400 focus:text-emerald-400"
-                          onClick={() => handleAction(story._id, 'approved')}>
-                          <CheckCircle className="w-4 h-4" /> Approve
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 cursor-pointer text-sm text-red-400 focus:text-red-400"
-                          onClick={() => handleAction(story._id, 'rejected')}>
-                          <XCircle className="w-4 h-4" /> Reject
-                        </DropdownMenuItem>
+                        {story.status !== 'approved' && (
+                          <DropdownMenuItem className="gap-2 cursor-pointer text-sm text-emerald-400 focus:text-emerald-400"
+                            onClick={() => handleAction(story._id, 'approved')}>
+                            <CheckCircle className="w-4 h-4" /> Approve
+                          </DropdownMenuItem>
+                        )}
+                        {story.status !== 'rejected' && (
+                          <DropdownMenuItem className="gap-2 cursor-pointer text-sm text-red-400 focus:text-red-400"
+                            onClick={() => handleAction(story._id, 'rejected')}>
+                            <XCircle className="w-4 h-4" /> Reject
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -287,12 +322,16 @@ export default function StoriesPage() {
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" size="sm" className="border-white/[0.06]" onClick={() => setIsViewModalOpen(false)}>Close</Button>
-            <Button size="sm" className="bg-destructive hover:bg-destructive/90 text-white"
-              onClick={() => selectedStory && handleAction(selectedStory._id, 'rejected')}
-              disabled={statusMutation.isPending}>Reject</Button>
-            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => selectedStory && handleAction(selectedStory._id, 'approved')}
-              disabled={statusMutation.isPending}>Approve & Publish</Button>
+            {selectedStory?.status !== 'rejected' && (
+              <Button size="sm" className="bg-destructive hover:bg-destructive/90 text-white"
+                onClick={() => selectedStory && handleAction(selectedStory._id, 'rejected')}
+                disabled={statusMutation.isPending}>Reject</Button>
+            )}
+            {selectedStory?.status !== 'approved' && (
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => selectedStory && handleAction(selectedStory._id, 'approved')}
+                disabled={statusMutation.isPending}>Approve & Publish</Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
