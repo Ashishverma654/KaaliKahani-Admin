@@ -80,6 +80,9 @@ export default function CreateStoryPage() {
     e?.preventDefault();
     
     const finalStatus = statusOverride || formData.status;
+    if (statusOverride && statusOverride !== formData.status) {
+      setFormData(prev => ({ ...prev, status: statusOverride }));
+    }
 
     if (!formData.title || !formData.content || !formData.category) {
       toast.error('Please fill in all required fields');
