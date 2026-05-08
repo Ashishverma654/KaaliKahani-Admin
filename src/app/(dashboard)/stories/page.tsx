@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MoreVertical, Eye, CheckCircle, XCircle, Search, Filter, Calendar, Languages, User as UserIcon, PlusCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import toast from 'react-hot-toast';
@@ -29,12 +31,23 @@ interface Story {
 }
 
 export default function StoriesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <StoriesContent />
+    </Suspense>
+  );
+}
+
+function StoriesContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'all';
+  
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: stories, isLoading } = useQuery<Story[]>({
