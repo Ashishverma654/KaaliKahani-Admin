@@ -16,6 +16,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+
 export default function DashboardLayout({
   children,
 }: {
@@ -24,6 +27,11 @@ export default function DashboardLayout({
   const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const { data: stats } = useQuery({
+    queryKey: ['admin-stats-header'],
+    queryFn: async () => (await api.get('/admin/stats')).data.data
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -94,10 +102,45 @@ export default function DashboardLayout({
             </Button>
 
             {/* Notification Bell */}
-            <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg hover:bg-white/[0.06]">
-              <Bell className="w-[18px] h-[18px] text-muted-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-[#09090b]" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-lg hover:bg-white/[0.06]">
+                  <Bell className="w-[18px] h-[18px] text-muted-foreground" />
+                  {stats?.pendingStories > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-[#09090b]" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 bg-[#111113] border-white/[0.08] shadow-xl p-0">
+                <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                  <span className="text-[10px] text-primary hover:underline cursor-pointer">Mark all as read</span>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto">
+                  {stats?.pendingStories > 0 ? (
+                    <div 
+                      className="p-4 border-b border-white/[0.04] hover:bg-white/[0.02] cursor-pointer transition-colors"
+                      onClick={() => router.push('/stories')}
+                    >
+                      <p className="text-xs text-white font-medium mb-1">Pending Stories</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        There are {stats.pendingStories} stories waiting for your approval.
+                      </p>
+                      <p className="text-[9px] text-primary/60 mt-2">Requires attention</p>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground text-xs italic">
+                      No new notifications.
+                    </div>
+                  )}
+                </div>
+                <div className="p-2 border-t border-white/[0.06] text-center">
+                  <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground hover:text-white h-8" onClick={() => router.push('/stories')}>
+                    View All Stories
+                  </Button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Divider */}
             <div className="w-px h-6 bg-white/[0.06] mx-1" />
